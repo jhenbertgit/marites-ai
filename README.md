@@ -15,7 +15,7 @@ To get started with Marites AI, clone the repository and install dependencies:
 
 ```sh
 # Clone the repo
-git clone https://github.com/your-username/marites-ai.git
+git clone https://github.com/jhenbertgit/marites-ai.git
 cd marites-ai
 
 # Install dependencies
