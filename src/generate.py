@@ -1,7 +1,7 @@
 import os
 import torch
 from data import load_data, Tokenizer
-from model.marites_model import MaritesModel
+from marites_model import MaritesAI
 from torch.nn import functional as F
 
 def generate(model, tokenizer, prompt, max_len=100, block_size=32):
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     tokenizer = Tokenizer(text)
     
     # Initialize the model using the same hyperparameters used during training
-    model = MaritesModel(
+    model = MaritesAI(
         vocab_size=tokenizer.vocab_size,
         embed_dim=512,
         block_size=32,

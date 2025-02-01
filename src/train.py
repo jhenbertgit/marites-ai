@@ -1,3 +1,4 @@
+import os
 import json
 import torch
 from torch.utils.data import Dataset
@@ -68,7 +69,8 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # Load dataset
-dataset_path = "C:/Users/Dell/Documents/projects/marites-llm/data/raw/marites_dataset.json"  # Absolute path
+current_dir = os.path.dirname(os.path.abspath(__file__)) # Get the directory where this script is located
+dataset_path = os.path.join(current_dir, "..", "data", "raw", "marites_dataset.json")  # Build absolute paths to the required files
 data = load_dataset(dataset_path)
 
 # Split dataset

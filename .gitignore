@@ -172,3 +172,5 @@ cython_debug/
 
 offload/
 marites_model/
+eval/
+logs/
