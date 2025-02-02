@@ -33,7 +33,7 @@ python src/train.py
 For DeepSpeed or Accelerate support:
 
 ```sh
-python src/train.py --use_deepspeed --offload_folder offload/
+python src/train.py --use_deepspeed
 ```
 
 ## 🤖 Usage
