@@ -1,49 +1,61 @@
 import os
 import torch
-from data import load_data, Tokenizer
-from marites_model import MaritesAI
-from torch.nn import functional as F
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-def generate(model, tokenizer, prompt, max_len=100, block_size=32):
-    model.eval()
-    # Encode the prompt and use only the last block_size tokens as context
-    context = tokenizer.encode(prompt)[-block_size:]
-    for _ in range(max_len):
-        # Ensure the input is of shape (1, block_size)
-        x = torch.tensor([context[-block_size:]]).long()
-        logits = model(x)
-        # Take the logits for the last token and apply softmax to obtain probabilities
-        probs = F.softmax(logits[0, -1, :], dim=-1)
-        next_id = torch.multinomial(probs, num_samples=1).item()
-        context.append(next_id)
-    return tokenizer.decode(context)
+# Specify your model name (replace with your trained model's path)
+model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Load tokenizer and model
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token  # Set pad token if missing
+
+# Load the trained model
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto" if device == "cuda" else None,
+    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+)
+
+model.to(device)  # Move model to the correct device (GPU/CPU)
+
+def generate_gossip(
+    prompt,
+    max_length=100,
+    min_length=50,
+    temperature=0.7,
+    top_k=50,
+    top_p=0.95,
+    no_repeat_ngram_size=2,
+    repetition_penalty=1.2,
+):
+    # Tokenize the input prompt
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+
+    # Generate a gossip response with additional parameters for more control
+    output = model.generate(
+        input_ids=inputs["input_ids"],
+        attention_mask=inputs["attention_mask"],
+        max_length=max_length,
+        min_length=min_length,
+        temperature=temperature,
+        top_k=top_k,
+        top_p=top_p,
+        no_repeat_ngram_size=no_repeat_ngram_size,
+        repetition_penalty=repetition_penalty,
+        num_return_sequences=1,  # Return only one output sequence
+        pad_token_id=tokenizer.eos_token_id,
+    )
+
+    # Decode the generated tokens and return the result
+    generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+    return generated_text
 
 if __name__ == "__main__":
-    # Get the directory where this script is located
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Test prompt
+    prompt = input("Enter a gossip prompt: ")
 
-    # Build absolute paths to the required files
-    data_path = os.path.join(current_dir, "..", "data", "raw", "input.txt")
-    model_path = os.path.join(current_dir, "..", "outputs", "checkpoints", "marites_epoch_4000.pt")
-
-    # Load model data and tokenizer from the input text
-    text = load_data(data_path)
-    tokenizer = Tokenizer(text)
-    
-    # Initialize the model using the same hyperparameters used during training
-    model = MaritesAI(
-        vocab_size=tokenizer.vocab_size,
-        embed_dim=512,
-        block_size=32,
-        n_heads=8,
-        n_layers=4
-    )
-    
-    # Load the trained model state
-    model.load_state_dict(torch.load(model_path))
-    
-    # Generate text using a custom prompt
-    prompt = "Marites, may chismis ka ba?"  # <-- You can change the prompt here
-    generated_text = generate(model, tokenizer, prompt)
-    
-    print(f"Prompt: {prompt}\nGenerated Text: {generated_text}")
+    generated_gossip = generate_gossip(prompt)
+    print("\nMarites AI says: ")
+    print(generated_gossip)
