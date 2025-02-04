@@ -3,7 +3,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Specify your model name
-model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+model_name = "../marites_model/checkpoint-2"
 
 # Check for GPU availability
 device = "cuda" if torch.cuda.is_available() else "cpu"

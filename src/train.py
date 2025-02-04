@@ -83,8 +83,8 @@ eval_dataset = GossipDataset(eval_data, tokenizer)
 # Training Arguments with evaluation disabled
 training_args = TrainingArguments(
     output_dir="./marites_model",
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=32,
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=16,
     num_train_epochs=1,
     learning_rate=2e-5,
     logging_dir="./logs",

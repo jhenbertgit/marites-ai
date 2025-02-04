@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 def load_data(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
