@@ -1,6 +1,3 @@
 torch
-numpy
-pyyaml
 transformers
-scikit-learn
-accelerate
+datasets
