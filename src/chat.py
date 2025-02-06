@@ -1,9 +1,8 @@
-import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Specify your model name
-model_name = "../marites_model/checkpoint-2"
+model_name = "./marites_model"
 
 # Check for GPU availability
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,8 +34,8 @@ def generate_response(prompt, max_length=150):
         num_return_sequences=1,
         no_repeat_ngram_size=2,  # Avoid repetitive phrases
         top_k=50,                # Top-k sampling
-        top_p=0.95,              # Nucleus sampling
-        temperature=0.7,         # Sampling temperature
+        top_p=0.9,              # Nucleus sampling
+        temperature=0.8,         # Sampling temperature
         do_sample=True,          # Enable sampling instead of greedy decoding
     )
 

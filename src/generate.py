@@ -3,7 +3,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Specify your model name (replace with your trained model's path)
-model_name = "../marites_model/checkpoint-2"
+model_name = "./marites_model"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Load tokenizer and model

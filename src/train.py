@@ -14,11 +14,14 @@ DATASET_NAME = "jhenberthf/filipino-gossip-dataset"
 MAX_LENGTH = 1024
 OUTPUT_DIR = "./marites_model"
 TRAIN_ARGS = {
-    "per_device_train_batch_size": 2,
-    "gradient_accumulation_steps": 8,
-    "num_train_epochs": 2,
-    "learning_rate": 2e-5,
+    "per_device_train_batch_size": 4,
+    "gradient_accumulation_steps": 16,
+    "num_train_epochs": 1,
+    "learning_rate": 1e-5,
     "fp16": torch.cuda.is_available(),
+    "max_grad_norm": 1.0,  # Gradient clipping
+    "weight_decay": 0.01,  # Add weight decay if overfitting is a concern
+    "logging_dir": "./logs",  # Optional: log directory for TensorBoard
     "optim": "adamw_torch",
 }
 
@@ -82,7 +85,7 @@ model = AutoModelForCausalLM.from_pretrained(
 # Training arguments
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
-    evaluation_strategy="steps",
+    eval_strategy="steps",
     eval_steps=500,
     save_strategy="steps",
     save_steps=500,
@@ -104,3 +107,9 @@ trainer = Trainer(
 # Train the model
 if __name__ == "__main__":
     trainer.train()
+
+    # Save the final model and tokenizer
+    model.save_pretrained(OUTPUT_DIR, safe_serialization=True)
+    tokenizer.save_pretrained(OUTPUT_DIR)
+
+    print(f"Final model and tokenizer saved to {OUTPUT_DIR}")
