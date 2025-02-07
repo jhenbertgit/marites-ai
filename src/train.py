@@ -17,8 +17,8 @@ OUTPUT_DIR = "./marites_model"
 
 # Training arguments with better defaults
 TRAIN_ARGS = {
-    "per_device_train_batch_size": 4,
-    "gradient_accumulation_steps": 4,
+    "per_device_train_batch_size": 2,
+    "gradient_accumulation_steps": 8,
     "learning_rate": 1e-5,
     "bf16": torch.cuda.is_available(),
     "gradient_checkpointing": True,
@@ -27,6 +27,7 @@ TRAIN_ARGS = {
     "max_grad_norm": 1.0,
     "warmup_ratio": 0.1,
     "lr_scheduler_type": "cosine",
+    "fp16_full_eval": False,  # Disable mixed precision for validation
 }
 
 class TrainingMonitorCallback(TrainerCallback):
@@ -51,6 +52,28 @@ class TrainingMonitorCallback(TrainerCallback):
             print(f"Logits shape: {outputs.logits.shape}")
         except Exception as e:
             print(f"❌ Model forward pass failed: {str(e)}")
+    
+    def on_step_end(self, args, state, control, **kwargs):
+        # Get model from kwargs instead of global scope
+        model = kwargs.get('model')
+        if model is None:
+            return
+        
+        grads = [
+            p.grad.norm().item()
+            for p in model.parameters()
+            if p.grad is not None
+        ]
+        
+        # Check for empty gradients
+        if not grads:
+            print("Warning: No gradients found in this step")
+            return
+        
+        # Check for gradient explosion
+        max_grad = max(grads)
+        if max_grad > 1e5:
+            print(f"Gradient explosion detected: {max_grad:.2f}")
 
 # Load and prepare dataset
 def prepare_dataset():
@@ -58,8 +81,8 @@ def prepare_dataset():
     
     # Handle dataset splits
     if isinstance(dataset, dict) and 'train' in dataset:
-        return dataset['train'].train_test_split(test_size=0.1)
-    return dataset.train_test_split(test_size=0.1)
+        return dataset['train'].train_test_split(test_size=0.25)
+    return dataset.train_test_split(test_size=0.25)
 
 # Initialize components
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
@@ -74,14 +97,21 @@ def format_text(examples):
         ) for p, r in zip(examples['prompt'], examples['response'])
     ]}
 
+# Modify tokenization function
 def tokenize_function(examples):
-    return tokenizer(
+    tokenized = tokenizer(
         examples["text"],
         truncation=True,
         max_length=MAX_LENGTH,
-        padding=False,  # Dynamic padding handled by collator
-        add_special_tokens=True
+        add_special_tokens=True,
+        return_offsets_mapping=True
     )
+    
+    # Add this instead to verify tokenization:
+    if len(tokenized["input_ids"]) == 0:
+        raise ValueError("Empty tokenization result!")
+    
+    return tokenized
 
 # Main execution
 if __name__ == "__main__":
@@ -89,6 +119,10 @@ if __name__ == "__main__":
     dataset = prepare_dataset()
     dataset = dataset.map(format_text, batched=True, remove_columns=dataset["train"].column_names)
     tokenized_dataset = dataset.map(tokenize_function, batched=True, remove_columns=["text"])
+
+    # After tokenized_dataset = dataset.map(...)
+    if len(tokenized_dataset["train"]) == 0:
+        raise ValueError("Training dataset is empty after tokenization!")
 
     # Model initialization
     model = AutoModelForCausalLM.from_pretrained(
@@ -98,6 +132,7 @@ if __name__ == "__main__":
         attn_implementation="flash_attention_2" if torch.cuda.is_available() else None,
         use_cache=False
     )
+
 
     # Pre-training checks
     print("\nRunning initial validation:")
@@ -110,6 +145,11 @@ if __name__ == "__main__":
         initial_loss = outputs.loss.item() if outputs.loss else float('inf')
         print(f"Initial validation loss: {initial_loss:.2f}")
 
+    sample = tokenized_dataset["train"][0]
+    print("Input IDs:", sample["input_ids"])
+    print("Labels:", sample["input_ids"][1:] + [-100])  # Should be shifted
+    print("Decoded Input:", tokenizer.decode(sample["input_ids"]))
+
     # Configure training
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
@@ -119,7 +159,8 @@ if __name__ == "__main__":
         save_steps=500,
         logging_steps=50,
         load_best_model_at_end=True,
-        report_to="none",
+        logging_dir="./logs",
+        report_to="tensorboard",
         **TRAIN_ARGS
     )
 
