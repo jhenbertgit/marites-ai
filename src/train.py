@@ -25,14 +25,16 @@ TRAIN_ARGS = {
     "gradient_accumulation_steps": 4,  # Reduced from 16
     
     # Adjust learning rate and schedule
-    "learning_rate": 1e-5,  # Increased slightly
+    "learning_rate": 2e-4,  # Increased slightly
+    "warmup_steps": 5,
+    "max_steps": 30,
     "warmup_ratio": 0.05,
     "lr_scheduler_type": "linear",  # Changed to linear for stability
-    "num_train_epochs": 3,
+    "num_train_epochs": 1,
     
     # Memory optimization
     "gradient_checkpointing": True,
-    "optim": "adamw_torch" if torch.cuda.is_available() else "adamw_torch",  # Use PyTorch's AdamW
+    "optim": "paged_adamw_8bit",  # Save more memory
     "weight_decay": 0.01,
     "max_grad_norm": 1.0,
     
@@ -44,7 +46,7 @@ TRAIN_ARGS = {
     "save_total_limit": 2,
     
     # Debug settings
-    "logging_steps": 5,
+    "logging_steps": 1,
     
     # Hardware-specific settings
     "fp16": False,
@@ -158,8 +160,8 @@ def prepare_dataset():
     
     # Handle dataset splits
     if isinstance(dataset, dict) and 'train' in dataset:
-        return dataset['train'].train_test_split(test_size=0.25)
-    return dataset.train_test_split(test_size=0.25)
+        return dataset['train'].train_test_split(test_size=0.2)
+    return dataset.train_test_split(test_size=0.2)
 
 # Initialize components
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
