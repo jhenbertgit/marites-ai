@@ -2,3 +2,7 @@ torch
 transformers
 datasets
 tensorboardX
+unsloth
+wandb
+dotenv
+
