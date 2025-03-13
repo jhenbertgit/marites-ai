@@ -30,7 +30,7 @@ load_in_4bit = True
 
 # Load the Deepseek R1 model and tokenizer using unsloth
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="unsloth/DeepSeek-R1-Distill-Llama-8B",
+    model_name="unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
     max_seq_length=max_seq_length,
     dtype=dtype,
     load_in_4bit=load_in_4bit,
